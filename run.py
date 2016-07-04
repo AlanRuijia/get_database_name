@@ -93,7 +93,7 @@ def get_table_name(expression, con, shading_elem):
 
             table_name.add_paragraph(res[1] + '   ' + table_comment)
             p_table = table.add_paragraph()
-            run = p_table.add_run('\t\t' + str(res[1]))
+            run = p_table.add_run('Table Name: ' + str(res[1]))
             run.bold = True
             # run.underline = True
             docx_table = table.add_table(rows=1, cols=8, style='TableGrid')
