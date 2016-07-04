@@ -1,0 +1,8 @@
+{
+	"UserName": "apps",
+	"Password": "apps",
+	"Server" : "20.13.0.166:1521",
+	"SID": "dev",
+	"expression": "^XIE",
+	"backup": "^FND|^GL|^AP|^HR"
+}
