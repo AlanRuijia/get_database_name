@@ -91,24 +91,25 @@ def get_table_name(expression, con, shading_elem):
 
             p = table_name.add_paragraph(res[1] + '   ' + table_comment)
 
-            docx_table = table.add_table(rows = 1, cols = 8)
-            first_row_cells = docx_table.row(0).cells
-            first_row_cells[0] = 'Column Name'
-            first_row_cells[0]._tc.get_or_add_tcPr().append(shading_elm)
-            first_row_cells[1] = 'PK'
-            first_row_cells[1]._tc.get_or_add_tcPr().append(shading_elm)
-            first_row_cells[2] = 'Type'
-            first_row_cells[2]._tc.get_or_add_tcPr().append(shading_elm)
-            first_row_cells[3] = 'Size'
-            first_row_cells[3]._tc.get_or_add_tcPr().append(shading_elm)
-            first_row_cells[4] = 'Scale'
-            first_row_cells[4]._tc.get_or_add_tcPr().append(shading_elm)
-            first_row_cells[5] = 'Null allowed'
-            first_row_cells[5]._tc.get_or_add_tcPr().append(shading_elm)
-            first_row_cells[6] = 'Default'
-            first_row_cells[6]._tc.get_or_add_tcPr().append(shading_elm)
-            first_row_cells[7] = 'Description'
-            first_row_cells[7]._tc.get_or_add_tcPr().append(shading_elm)
+            docx_table = table.add_table(rows=1, cols=8, style='TableGrid')
+            # docx_table.style = 'TableGrid'
+            first_row_cells = docx_table.rows[0].cells
+            first_row_cells[0].text = 'Column Name'
+            # first_row_cells[0]._tc.get_or_add_tcPr().append(shading_elm)
+            first_row_cells[1].text = 'PK'
+            # first_row_cells[1]._tc.get_or_add_tcPr().append(shading_elm)
+            first_row_cells[2].text = 'Type'
+            # first_row_cells[2]._tc.get_or_add_tcPr().append(shading_elm)
+            first_row_cells[3].text = 'Size'
+            # first_row_cells[3]._tc.get_or_add_tcPr().append(shading_elm)
+            first_row_cells[4].text = 'Scale'
+            # first_row_cells[4]._tc.get_or_add_tcPr().append(shading_elm)
+            first_row_cells[5].text = 'Null allowed'
+            # first_row_cells[5]._tc.get_or_add_tcPr().append(shading_elm)
+            first_row_cells[6].text = 'Default'
+            # first_row_cells[6]._tc.get_or_add_tcPr().append(shading_elm)
+            first_row_cells[7].text = 'Description'
+            # first_row_cells[7]._tc.get_or_add_tcPr().append(shading_elm)
 
             cur.execute(find_creation, res)
             create_info = cur.fetchall()[0][0].read().strip()
@@ -187,23 +188,33 @@ def get_table_name(expression, con, shading_elem):
 
                 if "DEFAULT" in eve:
                     default_value = eve[eve.index("DEFAULT") + 1]
-                
-                cells = table.add_row().cells
-                cells[0] = col_name
-                cells[1] = primary 
-                cells[2] = type_content 
-                cells[3] = size 
-                cells[4] = scale 
-                cells[5] = null_allowed 
-                cells[6] = default_value 
-                cells[7] = comment 
-                
+
+                if comment == 'None':
+                    comment = ' '
+                cells = docx_table.add_row().cells
+                cells[0].text = col_name.strip(',')
+                cells[1].text = primary.strip(',') 
+                cells[2].text = type_content.strip(',') 
+                cells[3].text = size.strip(',') 
+                cells[4].text = scale.strip(',') 
+                cells[5].text = null_allowed.strip(',') 
+                cells[6].text = default_value.strip(',')
+                cells[7].text = comment.decode('Utf-8')
+
+            table.add_paragraph(' ')
         except IndexError:
             print IndexError
             continue
-        table.save('Table.docx')
-        table_name.save('TableName.docx')
-        cur.close()
+
+    table.save('Table.docx')
+    table_name.save('TableName.docx')
+    cur.close()
+def get_brief_name(expression, con):
+    find_object_info = "select OBJECT_TYPE, OBJECT_NAME, OWNER from ALL_OBJECTS where regexp_like(OBJECT_NAME ,:expression)"
+    cur = con.cursor()
+
+    cur.execute(find_object_info, {'expression': str(expression)})
+    objectInfo = cur.fetchall()
 
 con = init()
 # Set a cell background (shading) color to RGB A0A0A0(Gray).
