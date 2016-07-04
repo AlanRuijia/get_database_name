@@ -1,0 +1,1 @@
+This is a python program to automatically fetch some data from an oracle database. 
