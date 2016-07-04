@@ -6,6 +6,7 @@ from docx import Document
 from docx.oxml.ns import nsdecls
 from docx.oxml import parse_xml
 
+
 def init():
     os.environ['NLS_LANG'] = 'SIMPLIFIED CHINESE_CHINA.UTF8'
     config = {}
@@ -43,6 +44,7 @@ def init():
 
     os.chdir(dir_name)
     return con
+
 
 def get_table_name(expression, con, shading_elem):
     find_object_info = "select OBJECT_TYPE, OBJECT_NAME, OWNER from ALL_OBJECTS where regexp_like(OBJECT_NAME ,:expression) AND OBJECT_TYPE='TABLE'"
@@ -89,32 +91,21 @@ def get_table_name(expression, con, shading_elem):
             cur.execute(column_num, {'tableName': str(res[1])})
             col_num = cur.fetchall()
 
-            p = table_name.add_paragraph(res[1] + '   ' + table_comment)
-
+            table_name.add_paragraph(res[1] + '   ' + table_comment)
+            p_table = table.add_paragraph()
+            run = p_table.add_run('\t\t' + str(res[1]))
+            run.bold = True
+            # run.underline = True
             docx_table = table.add_table(rows=1, cols=8, style='TableGrid')
             # docx_table.style = 'TableGrid'
             first_row_cells = docx_table.rows[0].cells
-            first_row_cells[0].text = 'Column Name'
-            # first_row_cells[0]._tc.get_or_add_tcPr().append(shading_elm)
-            first_row_cells[1].text = 'PK'
-            # first_row_cells[1]._tc.get_or_add_tcPr().append(shading_elm)
-            first_row_cells[2].text = 'Type'
-            # first_row_cells[2]._tc.get_or_add_tcPr().append(shading_elm)
-            first_row_cells[3].text = 'Size'
-            # first_row_cells[3]._tc.get_or_add_tcPr().append(shading_elm)
-            first_row_cells[4].text = 'Scale'
-            # first_row_cells[4]._tc.get_or_add_tcPr().append(shading_elm)
-            first_row_cells[5].text = 'Null allowed'
-            # first_row_cells[5]._tc.get_or_add_tcPr().append(shading_elm)
-            first_row_cells[6].text = 'Default'
-            # first_row_cells[6]._tc.get_or_add_tcPr().append(shading_elm)
-            first_row_cells[7].text = 'Description'
-            # first_row_cells[7]._tc.get_or_add_tcPr().append(shading_elm)
+            table_cols = ('Column Name', 'PK', 'Type', 'Size''Scale', 'Null allowed', 'Default', 'Description')
+            
+            for i in range(0, len(table_cols)):
+                first_row_cells[i].paragraph[0].add_run(table_cols[i]).bold = True
 
             cur.execute(find_creation, res)
             create_info = cur.fetchall()[0][0].read().strip()
-            # print res[1]
-            # print "00000000000000000"
             if str(res[1]) == 'AP_CHECK_INTEGERS':
                 print "Continue"
                 sleep(3)
@@ -209,6 +200,8 @@ def get_table_name(expression, con, shading_elem):
     table.save('Table.docx')
     table_name.save('TableName.docx')
     cur.close()
+
+
 def get_brief_name(expression, con):
     find_object_info = "select OBJECT_TYPE, OBJECT_NAME, OWNER from ALL_OBJECTS where regexp_like(OBJECT_NAME ,:expression)"
     cur = con.cursor()
