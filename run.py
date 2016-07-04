@@ -47,6 +47,7 @@ def init():
 
 
 def get_table_name(expression, con, shading_elem):
+    # Fetch table information
     find_object_info = "select OBJECT_TYPE, OBJECT_NAME, OWNER from ALL_OBJECTS where regexp_like(OBJECT_NAME ,:expression) AND OBJECT_TYPE='TABLE'"
     table_comment_exist = "SELECT COUNT(*) FROM all_tab_comments WHERE table_name = :tableName AND comments IS NOT NULL"
     get_table_comment = "SELECT comment FROM all_tab_comments WHERE table_name = :tableName"
@@ -102,8 +103,8 @@ def get_table_name(expression, con, shading_elem):
             table_cols = ('Column Name', 'PK', 'Type', 'Size''Scale', 'Null allowed', 'Default', 'Description')
             
             for i in range(0, len(table_cols)):
-                first_row_cells[i].paragraph[0].add_run(table_cols[i]).bold = True
-
+                # first_row_cells[i].paragraph[0].add_run(table_cols[i]).bold = True
+                first_row_cells[i].text = table_cols[i]
             cur.execute(find_creation, res)
             create_info = cur.fetchall()[0][0].read().strip()
             if str(res[1]) == 'AP_CHECK_INTEGERS':
@@ -202,14 +203,119 @@ def get_table_name(expression, con, shading_elem):
     cur.close()
 
 
+def get_view_name(expression, con):
+    find_object_info = '''select OBJECT_TYPE, OBJECT_NAME, OWNER from ALL_OBJECTS
+                            where regexp_like(OBJECT_NAME ,:expression) and OBJECT_TYPE = 'VIEW' '''
+    view_cols = "select column_name from all_tab_columns where table_name = :viewName"
+    find_creation = "SELECT DBMS_METADATA.GET_DDL(:1,:2,:3) FROM DUAL"
+
+    cur = con.cursor()
+    cur.execute(find_object_info, {'expression': str(expression)})
+    object_info = cur.fetchall()
+
+    view = Document()
+    for res in object_info:
+        view_res = []
+        cur.execute(view_cols, {'viewName': str(res[1])})
+        view_content = cur.fetchall()
+        cur.execute(find_creation, res)
+        view_creation_info = cur.fetchall()[0][0].read().strip()
+        print view_creation_info
+        view_creation_info = view_creation_info.split('\n')
+        view_creation_info = view_creation_info[1:]
+        for i in range(0, len(view_creation_info)):
+            view_creation_info[i].strip()
+
+        view_creation_info[0] = view_creation_info[0][8:]
+        print view_content
+        print "------------------View Create Info -----------------"
+        print view_creation_info
+        print "------------------------------len -----------------"
+        print len(view_creation_info)
+
+        for i in range(0, min(len(view_content), len(view_creation_info))):
+            # view_col_name = view_content[i][0]
+            print "------------------i--------------"
+            print i
+            print len(view_content)
+            view_col_name = view_creation_info[i]
+            print "------------view_col_name-----------------"
+            print view_col_name
+            print "------------------split,---specific--------"
+            specific_view_col = view_col_name.split(',')
+            print specific_view_col
+            source_table_flag = 0
+            for j in range(0, len(specific_view_col)):
+                if str(specific_view_col[j]) == '':
+                    continue
+                view_col_name = specific_view_col[j].strip().split()
+                print "----------view_col_name-------------------"
+                print view_col_name
+                print "-----------------------------"
+                if str(view_col_name[0]).lower() == 'from':
+                    source_table_flag = 1
+                    view_col_name = view_col_name[1:]
+                    source_table = "Source Table|" + str(view_col_name[0]) + " AS " + str(view_col_name[1] + '\n')
+                    view_res.insert(0, source_table)
+                    continue
+                if 'from' in view_col_name:
+                    view_col_name = specific_view_col[j].strip().split('from')
+                    if len(view_col_name) == 2:
+                        view_res.append(view_col_name[0] + '|' + view_col_name[0] + '\n')
+                        view_res.insert(0, "Source Table|" + str(view_col_name[1]) + '\n')
+                    if len(view_col_name) == 3:
+                        view_res.append(str(view_col_name[1]) + '|' + str(view_col_name[0]) + '\n')
+                        view_res.insert(0, "Source Table| " + str(view_col_name[2]) + '\n')
+                        continue
+                if source_table_flag == 1:
+                    view_res.insert(0, "Source Table|" + str(view_col_name[0]) + " AS " + str(view_col_name[1]) + '\n')
+                    continue
+                if len(view_col_name) == 1:
+                    view_res.append(str(view_col_name[0]) + '|' + str(view_col_name[0]) + '\n')
+                    continue
+
+                view_res.append(str(view_col_name[0]) + '|' + str(view_col_name[1]) + '\n')
+            if source_table_flag == 1:
+                break
+
+        view_res.insert(1, "View Column|Source Table Column")
+        for item in view_res:
+            view.write("%s\n" % item)
+
+
 def get_brief_name(expression, con):
-    find_object_info = "select OBJECT_TYPE, OBJECT_NAME, OWNER from ALL_OBJECTS where regexp_like(OBJECT_NAME ,:expression)"
+    # Fetch all kinds of object_name from all_objects
+    find_object_info = '''select OBJECT_TYPE, OBJECT_NAME, OWNER
+                            from ALL_OBJECTS where regexp_like(OBJECT_NAME ,:expression)'''
     cur = con.cursor()
 
     cur.execute(find_object_info, {'expression': str(expression)})
-    objectInfo = cur.fetchall()
+    object_info = cur.fetchall()
 
+    view_name = Document()
+    index_name = Document()
+    package_name = Document()
+    trigger_name = Document()
+    sequence_name = Document()
+    for res in object_info:
+        # print res
+        if str(res[0]) == 'VIEW':
+            view_name.add_paragraph(str(res[1]))
+        if str(res[0]) == 'INDEX':
+            index_name.add_paragraph(str(res[1]))
+        if str(res[0]) == 'PACKAGE':
+            package_name.add_paragraph(str(res[1]))
+        if str(res[0]) == 'TRIGGER':
+            trigger_name.add_paragraph(str(res[1]))
+        if str(res[0]) == 'SEQUENCE':
+            sequence_name.add_paragraph(str(res[1]))
+    view_name.save('ViewName.docx')
+    index_name.save('IndexName.docx')
+    package_name.save('PackageName.docx')
+    trigger_name.save('TriggerName.docx')
+    sequence_name.save('SequenceName.docx')
 con = init()
 # Set a cell background (shading) color to RGB A0A0A0(Gray).
 shading_elm = parse_xml(r'<w:shd {} w:fill="A0A0A0"/>'.format(nsdecls('w')))
 get_table_name('^XIE', con, shading_elm)
+get_brief_name('^XIE', con)
