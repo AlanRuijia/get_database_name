@@ -3,6 +3,8 @@ import cx_Oracle
 from time import localtime, strftime, sleep
 from json import load
 from docx import Document
+from docx.oxml.ns import nsdecls
+from docx.oxml import parse_xml
 
 def init():
     os.environ['NLS_LANG'] = 'SIMPLIFIED CHINESE_CHINA.UTF8'
@@ -42,7 +44,7 @@ def init():
     os.chdir(dir_name)
     return con
 
-def get_table_name(expression, con):
+def get_table_name(expression, con, shading_elem):
     find_object_info = "select OBJECT_TYPE, OBJECT_NAME, OWNER from ALL_OBJECTS where regexp_like(OBJECT_NAME ,:expression) AND OBJECT_TYPE='TABLE'"
     table_comment_exist = "SELECT COUNT(*) FROM all_tab_comments WHERE table_name = :tableName AND comments IS NOT NULL"
     get_table_comment = "SELECT comment FROM all_tab_comments WHERE table_name = :tableName"
@@ -69,8 +71,8 @@ def get_table_name(expression, con):
     cur.execute(find_object_info, {'expression': str(expression)})
     object_info = cur.fetchall()
 
-    table = open("Table.txt", 'w')
-    table_name = open("TableName.txt", 'w')
+    table = Document()
+    table_name = Document()
     for res in object_info:
         try:
             # print res
@@ -86,8 +88,28 @@ def get_table_name(expression, con):
 
             cur.execute(column_num, {'tableName': str(res[1])})
             col_num = cur.fetchall()
-            table.write('\n' + res[1] + '|' + table_comment + '\n')
-            table.write('Column Name|PK|Type|Size|Scale|Null allowed|Default|Description\n')
+
+            p = table_name.add_paragraph(res[1] + '   ' + table_comment)
+
+            docx_table = table.add_table(rows = 1, cols = 8)
+            first_row_cells = docx_table.row(0).cells
+            first_row_cells[0] = 'Column Name'
+            first_row_cells[0]._tc.get_or_add_tcPr().append(shading_elm)
+            first_row_cells[1] = 'PK'
+            first_row_cells[1]._tc.get_or_add_tcPr().append(shading_elm)
+            first_row_cells[2] = 'Type'
+            first_row_cells[2]._tc.get_or_add_tcPr().append(shading_elm)
+            first_row_cells[3] = 'Size'
+            first_row_cells[3]._tc.get_or_add_tcPr().append(shading_elm)
+            first_row_cells[4] = 'Scale'
+            first_row_cells[4]._tc.get_or_add_tcPr().append(shading_elm)
+            first_row_cells[5] = 'Null allowed'
+            first_row_cells[5]._tc.get_or_add_tcPr().append(shading_elm)
+            first_row_cells[6] = 'Default'
+            first_row_cells[6]._tc.get_or_add_tcPr().append(shading_elm)
+            first_row_cells[7] = 'Description'
+            first_row_cells[7]._tc.get_or_add_tcPr().append(shading_elm)
+
             cur.execute(find_creation, res)
             create_info = cur.fetchall()[0][0].read().strip()
             # print res[1]
@@ -165,19 +187,25 @@ def get_table_name(expression, con):
 
                 if "DEFAULT" in eve:
                     default_value = eve[eve.index("DEFAULT") + 1]
-                table.write(col_name + "|" +
-                            primary + '|' +
-                            type_content + "|" +
-                            size + "|" +
-                            scale + "|" +
-                            null_allowed + "|" +
-                            default_value + "|" +
-                            comment + '\n')
+                
+                cells = table.add_row().cells
+                cells[0] = col_name
+                cells[1] = primary 
+                cells[2] = type_content 
+                cells[3] = size 
+                cells[4] = scale 
+                cells[5] = null_allowed 
+                cells[6] = default_value 
+                cells[7] = comment 
+                
         except IndexError:
             print IndexError
             continue
-        table.close()
+        table.save('Table.docx')
+        table_name.save('TableName.docx')
         cur.close()
 
 con = init()
-get_table_name('^XIE', con)
+# Set a cell background (shading) color to RGB A0A0A0(Gray).
+shading_elm = parse_xml(r'<w:shd {} w:fill="A0A0A0"/>'.format(nsdecls('w')))
+get_table_name('^XIE', con, shading_elm)
