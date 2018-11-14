@@ -1,1 +1,1 @@
-This is a python data fetcher for an oracle database. This program automatically fetches the collection of elements from a target databease. 
+This is a data retriever implemented in Python, which is capable to fetch the collection of elements from a targeted database. 
